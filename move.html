@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en"> 
+ <head> 
+  <meta charset="UTF-8"> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+  <title>搖桿控制角色移動</title> 
+  <link rel="stylesheet" href="style.css"> 
+ <style type="text/css" id="dcoder_stylesheet">/* 遊戲區域 */
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: linear-gradient(45deg, #800080, #0000FF);
+}
+
+#game-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+
+#player-left, #player-right {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  top: 0;
+  left: 0;
+transform: translate(-50%,-50%);
+}
+
+#player-right {
+  display: none; /* 默認隱藏右移的圖片 */
+}
+
+
+/* 搖桿容器 */
+#joystick-container {
+  position: fixed;
+  bottom: 50px;
+  left: 50px;
+  width: 150px;
+  height: 150px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  touch-action: none; /* 禁止默認觸摸行為 */
+}
+
+/* 搖桿本體 */
+#joystick {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+</style>
+</head> 
+ <body> <!-- 遊戲區域 --> 
+  <div id="game-container"> <!-- 角色 --> 
+    <div id="player-container">
+      <img id="player-left" src="C:\workplace\lll-reverse.gif" alt="Left Player" />
+      <img id="player-right" src="C:\workplace\lll.gif" alt="Right Player" />
+    </div>
+    
+   <div id="joystick-container">
+    <div id="joystick"></div> 
+   </div> 
+  </div> 
+  <script src="script.js"></script> 
+ 
+<script type="text/javascript" id="dcoder_script">// 遊戲區域與角色初始化
+
+const gameContainer = document.getElementById('game-container');
+const playerLeft = document.getElementById('player-left');
+const playerRight = document.getElementById('player-right');
+
+// 模擬搖桿控制，假設 joystickX 是搖桿的 X 軸數值（-1 到 1）
+let joystickX = 0;
+
+// 更新圖片顯示邏輯
+function updateJoystick() {
+  if (joystickX < 0) { // 左移
+    playerLeft.style.display = 'block';  // 顯示左移圖片
+    playerRight.style.display = 'none'; // 隱藏右移圖片
+  } else if (joystickX > 0) { // 右移
+    playerLeft.style.display = 'none';  // 隱藏左移圖片
+    playerRight.style.display = 'block'; // 顯示右移圖片
+  } else { // 靜止
+    playerLeft.style.display = 'none';  // 隱藏左移圖片
+    playerRight.style.display = 'none'; // 隱藏右移圖片
+  }
+}
+
+// 模擬搖桿輸入變化（這部分根據實際搖桿事件來處理）
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'ArrowLeft') {
+    joystickX = -1; // 模擬左移
+  } else if (event.key === 'ArrowRight') {
+    joystickX = 1; // 模擬右移
+  }
+  updateJoystick(); // 更新圖片顯示
+});
+
+const joystickContainer = document.getElementById('joystick-container');
+const joystick = document.getElementById('joystick');
+
+let playerPosition = { x: gameContainer.offsetWidth / 2, y: gameContainer.offsetHeight / 2 };
+let centerX, centerY; // 搖桿中心
+let isTouchActive = false;
+let direction = { x: 0, y: 0 }; // 當前搖桿方向
+const maxDistance = 65; // 外圓半徑
+
+// 初始化搖桿中心點
+function initJoystickCenter() {
+  const rect = joystickContainer.getBoundingClientRect();
+  centerX = rect.left + rect.width / 2;
+  centerY = rect.top + rect.height / 2;
+}
+
+// 計算搖桿方向和距離
+function getJoystickDirection(touchX, touchY) {
+  const dx = touchX - centerX;
+  const dy = touchY - centerY;
+
+  // 計算距離，並限制黑色圓不超出外圓範圍
+  const distance = Math.min(Math.sqrt(dx * dx + dy * dy), maxDistance);
+  const angle = Math.atan2(dy, dx);
+
+  // 計算受限的 x, y 偏移值
+  const limitedX = Math.cos(angle) * distance;
+  const limitedY = Math.sin(angle) * distance;
+
+  // 更新搖桿位置（確保黑色圓不會超出外圓範圍）
+  joystick.style.transform = `translate(${limitedX - joystick.offsetWidth / 2}px, ${limitedY - joystick.offsetHeight / 2}px)`;
+
+  // 返回方向與距離
+  return {
+    x: limitedX / maxDistance,
+    y: limitedY / maxDistance,
+  };
+}
+
+// 更新角色位置
+function updatePlayerPosition() {
+  // 根據方向計算新位置
+  playerPosition.x += direction.x * 3; // 固定速度
+  playerPosition.y += direction.y * 3; // 固定速度
+
+  // 限制角色不超出遊戲區域
+  playerPosition.x = Math.max(0, Math.min(gameContainer.offsetWidth - 50, playerPosition.x));
+  playerPosition.y = Math.max(0, Math.min(gameContainer.offsetHeight - 50, playerPosition.y));
+
+  // 更新角色位置
+  player.style.left = `${playerPosition.x}px`;
+  player.style.top = `${playerPosition.y}px`;
+
+  // 持續更新畫面
+  requestAnimationFrame(updatePlayerPosition);
+}
+
+// 搖桿觸摸事件處理
+joystickContainer.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  isTouchActive = true;
+  initJoystickCenter();
+});
+
+joystickContainer.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (!isTouchActive) return;
+
+  const touch = e.touches[0];
+  direction = getJoystickDirection(touch.clientX, touch.clientY); // 更新方向
+});
+
+joystickContainer.addEventListener('touchend', () => {
+  isTouchActive = false;
+  joystick.style.transform = `translate(-50%, -50%)`; // 重置搖桿位置
+  direction = { x: 0, y: 0 }; // 停止移動
+});
+
+// 啟動角色移動
+updatePlayerPosition();
+</script></body></html>
